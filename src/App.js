@@ -28,6 +28,14 @@ function App() {
     // 合計回数を更新
     setTotalRolls(prev => prev + 1);
   };
+  
+  // 履歴をリセットする関数
+  const resetStats = () => {
+    setHistory({
+      2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0
+    });
+    setTotalRolls(0);
+  };
 
   // サイコロの目の合計を計算
   const total = dice[0] + dice[1];
@@ -77,10 +85,19 @@ function App() {
         合計: {total}
       </div>
       
-      <button onClick={rollDice}>サイコロを振る</button>
+      <div className="controls">
+        <button className="roll-button" onClick={rollDice}>サイコロを振る</button>
+      </div>
+      
+      <div className="stats-summary">
+        <div className="stats-box">
+          <h3>総振り回数</h3>
+          <div className="stats-value">{totalRolls}</div>
+        </div>
+      </div>
       
       <div className="history-container">
-        <h2>合計値の履歴（合計{totalRolls}回）</h2>
+        <h2>合計値の履歴</h2>
         <div className="chart-container">
           <ResponsiveContainer width="100%" height={350}>
             <BarChart data={historyData} margin={{ top: 20, right: 20, left: 10, bottom: 40 }}>
@@ -122,6 +139,9 @@ function App() {
               </tr>
             </tbody>
           </table>
+          <div className="controls">
+            <button className="reset-button" onClick={resetStats}>統計リセット</button>
+          </div>
         </div>
       </div>
       
@@ -141,6 +161,11 @@ function App() {
         h2 {
           color: #555;
           margin-top: 30px;
+        }
+        
+        h3 {
+          margin: 0;
+          color: #444;
         }
         
         .dice-container {
@@ -168,27 +193,66 @@ function App() {
           margin-bottom: 20px;
         }
         
+        .controls {
+          display: flex;
+          justify-content: center;
+          gap: 15px;
+          margin-bottom: 20px;
+        }
+        
         button {
-          background-color: #4CAF50;
-          border: none;
-          color: white;
           padding: 15px 32px;
           text-align: center;
           text-decoration: none;
           display: inline-block;
           font-size: 16px;
-          margin: 4px 2px;
           cursor: pointer;
           border-radius: 5px;
+          border: none;
           transition: background-color 0.3s;
         }
         
-        button:hover {
+        .roll-button {
+          background-color: #4CAF50;
+          color: white;
+        }
+        
+        .roll-button:hover {
           background-color: #45a049;
         }
         
+        .reset-button {
+          background-color: #f44336;
+          color: white;
+        }
+        
+        .reset-button:hover {
+          background-color: #d32f2f;
+        }
+        
+        .stats-summary {
+          display: flex;
+          justify-content: center;
+          margin: 20px 0;
+        }
+        
+        .stats-box {
+          background-color: #f5f5f5;
+          border-radius: 8px;
+          padding: 15px 30px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          min-width: 150px;
+        }
+        
+        .stats-value {
+          font-size: 32px;
+          font-weight: bold;
+          color: #3f51b5;
+          margin-top: 5px;
+        }
+        
         .history-container {
-          margin-top: 40px;
+          margin-top: 20px;
         }
         
         .chart-container {
@@ -214,6 +278,7 @@ function App() {
           width: 100%;
           border-collapse: collapse;
           margin-top: 10px;
+          margin-bottom: 30px;
           font-size: 14px;
         }
         
