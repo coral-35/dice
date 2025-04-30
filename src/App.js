@@ -1,28 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 
 function App() {
-  // サイコロの目を保存するstate
+  // サイコロの個数を管理するstate
+  const [diceCount, setDiceCount] = useState(2);
+  // サイコロの目を保存するstate（配列で複数のサイコロに対応）
   const [dice, setDice] = useState([1, 1]);
-  // サイコロの合計履歴を保存するstate（2～12の各合計値の出現回数）
-  const [history, setHistory] = useState({
-    2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0
-  });
+  // サイコロの合計履歴を保存するstate
+  const [history, setHistory] = useState({});
   // 振った合計回数
   const [totalRolls, setTotalRolls] = useState(0);
   
+  // 最小値と最大値を計算
+  const minValue = diceCount;
+  const maxValue = diceCount * 6;
+  
+  // サイコロの個数が変わったときに履歴を初期化
+  useEffect(() => {
+    initializeHistory();
+    // サイコロ配列も更新
+    setDice(Array(diceCount).fill(1));
+  }, [diceCount]);
+  
+  // 履歴の初期化関数
+  const initializeHistory = () => {
+    const newHistory = {};
+    for (let i = minValue; i <= maxValue; i++) {
+      newHistory[i] = 0;
+    }
+    setHistory(newHistory);
+    setTotalRolls(0);
+  };
+  
+  // サイコロの個数を変更する関数
+  const changeDiceCount = (count) => {
+    if (count >= 1 && count <= 5) {
+      setDiceCount(count);
+    }
+  };
+  
   // サイコロを振る関数
   const rollDice = () => {
-    // 1から6までのランダムな数字を生成
-    const die1 = Math.floor(Math.random() * 6) + 1;
-    const die2 = Math.floor(Math.random() * 6) + 1;
-    setDice([die1, die2]);
+    // 各サイコロで1から6までのランダムな数字を生成
+    const newDice = Array(diceCount).fill(0).map(() => Math.floor(Math.random() * 6) + 1);
+    setDice(newDice);
     
     // 合計を計算して履歴を更新
-    const total = die1 + die2;
+    const total = newDice.reduce((sum, value) => sum + value, 0);
     setHistory(prevHistory => ({
       ...prevHistory,
-      [total]: prevHistory[total] + 1
+      [total]: (prevHistory[total] || 0) + 1
     }));
     
     // 合計回数を更新
@@ -31,14 +58,11 @@ function App() {
   
   // 履歴をリセットする関数
   const resetStats = () => {
-    setHistory({
-      2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0, 11: 0, 12: 0
-    });
-    setTotalRolls(0);
+    initializeHistory();
   };
 
   // サイコロの目の合計を計算
-  const total = dice[0] + dice[1];
+  const total = dice.reduce((sum, value) => sum + value, 0);
 
   // 履歴データをグラフ用に整形
   const historyData = Object.keys(history).map(key => ({
@@ -72,13 +96,36 @@ function App() {
     return null;
   };
 
+  // サイコロ数を調整するボタングループ
+  const DiceCountSelector = () => {
+    return (
+      <div className="dice-selector">
+        <h3>サイコロの個数</h3>
+        <div className="selector-buttons">
+          {[1, 2, 3, 4, 5].map((count) => (
+            <button 
+              key={count}
+              className={`selector-button ${diceCount === count ? 'active' : ''}`}
+              onClick={() => changeDiceCount(count)}
+            >
+              {count}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="app">
       <h1>サイコロアプリ</h1>
       
+      <DiceCountSelector />
+      
       <div className="dice-container">
-        <Die value={dice[0]} />
-        <Die value={dice[1]} />
+        {dice.map((value, index) => (
+          <Die key={index} value={value} />
+        ))}
       </div>
       
       <div className="total">
@@ -117,7 +164,7 @@ function App() {
             <thead>
               <tr>
                 <th>合計値</th>
-                {Object.keys(history).map(key => (
+                {Object.keys(history).sort((a, b) => Number(a) - Number(b)).map(key => (
                   <th key={key}>{key}</th>
                 ))}
               </tr>
@@ -125,13 +172,13 @@ function App() {
             <tbody>
               <tr>
                 <td>回数</td>
-                {Object.keys(history).map(key => (
+                {Object.keys(history).sort((a, b) => Number(a) - Number(b)).map(key => (
                   <td key={key}>{history[key]}</td>
                 ))}
               </tr>
               <tr>
                 <td>確率</td>
-                {Object.keys(history).map(key => (
+                {Object.keys(history).sort((a, b) => Number(a) - Number(b)).map(key => (
                   <td key={key}>
                     {totalRolls > 0 ? ((history[key] / totalRolls) * 100).toFixed(1) + '%' : '0%'}
                   </td>
@@ -139,9 +186,10 @@ function App() {
               </tr>
             </tbody>
           </table>
-          <div className="controls">
-            <button className="reset-button" onClick={resetStats}>統計リセット</button>
-          </div>
+        </div>
+        
+        <div className="reset-container">
+          <button className="reset-button" onClick={resetStats}>統計リセット</button>
         </div>
       </div>
       
@@ -168,10 +216,48 @@ function App() {
           color: #444;
         }
         
+        .dice-selector {
+          margin: 20px 0 40px;
+        }
+        
+        .selector-buttons {
+          display: flex;
+          justify-content: center;
+          margin-top: 10px;
+          gap: 10px;
+        }
+        
+        .selector-button {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          border: 2px solid #ccc;
+          background-color: white;
+          font-size: 18px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.3s;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        
+        .selector-button:hover {
+          background-color: #f0f0f0;
+        }
+        
+        .selector-button.active {
+          background-color: #3f51b5;
+          color: white;
+          border-color: #3f51b5;
+        }
+        
         .dice-container {
           display: flex;
           justify-content: center;
+          flex-wrap: wrap;
           margin: 20px 0;
+          gap: 15px;
         }
         
         .die {
@@ -180,7 +266,6 @@ function App() {
           background-color: white;
           border-radius: 10px;
           box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
-          margin: 0 10px;
           display: flex;
           justify-content: center;
           align-items: center;
@@ -196,7 +281,6 @@ function App() {
         .controls {
           display: flex;
           justify-content: center;
-          gap: 15px;
           margin-bottom: 20px;
         }
         
@@ -224,6 +308,7 @@ function App() {
         .reset-button {
           background-color: #f44336;
           color: white;
+          margin-top: 20px;
         }
         
         .reset-button:hover {
@@ -278,7 +363,6 @@ function App() {
           width: 100%;
           border-collapse: collapse;
           margin-top: 10px;
-          margin-bottom: 30px;
           font-size: 14px;
         }
         
@@ -294,6 +378,12 @@ function App() {
         
         tr:nth-child(even) {
           background-color: #f9f9f9;
+        }
+        
+        .reset-container {
+          display: flex;
+          justify-content: center;
+          margin-top: 30px;
         }
       `}</style>
     </div>
