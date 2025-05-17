@@ -1,6 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { Capacitor } from '@capacitor/core';
+import { AdMob, BannerAdPosition, BannerAdSize } from '@capacitor-community/admob';
 import './App.css';
+
+// テスト用広告ID
+const TEST_BANNER_ID = 'ca-app-pub-3940256099942544/6300978111';
+
+// 本番用広告ID（バナーのみ）
+const PROD_BANNER_ID = 'ca-app-pub-6167081005219975/4713109892'; // ここに実際のバナーユニットIDを入力
+
+// 環境に基づいて使用する広告IDを決定
+const BANNER_AD_ID = process.env.NODE_ENV === 'production' 
+  ? PROD_BANNER_ID 
+  : TEST_BANNER_ID;
+
+// アプリID（AndroidManifest.xmlに指定するID）
+const APP_ID = 'ca-app-pub-6167081005219975~2131178580';
 
 function App() {
   // サイコロの個数を管理するstate
@@ -11,10 +27,53 @@ function App() {
   const [history, setHistory] = useState({});
   // 振った合計回数
   const [totalRolls, setTotalRolls] = useState(0);
+  // 広告の準備ができたかどうか
+  const [adsInitialized, setAdsInitialized] = useState(false);
   
   // 最小値と最大値を計算
   const minValue = diceCount;
   const maxValue = diceCount * 6;
+  
+  // 広告初期化関数
+  const initializeAdMob = async () => {
+    try {
+      // AdMobの初期化
+      await AdMob.initialize({
+        requestTrackingAuthorization: true,
+        testingDevices: ['ABCDEF01234567890FEDCBA'], // 開発端末のデバイスID（必要に応じて変更）
+        initializeForTesting: process.env.NODE_ENV !== 'production',
+      });
+      
+      // バナー広告の表示
+      const bannerOptions = {
+        adId: BANNER_AD_ID,
+        adSize: BannerAdSize.BANNER,
+        position: BannerAdPosition.BOTTOM_CENTER,
+        margin: 0,
+      };
+      await AdMob.showBanner(bannerOptions);
+      
+      setAdsInitialized(true);
+      console.log('AdMob Banner initialized successfully');
+    } catch (error) {
+      console.error('Error initializing AdMob:', error);
+    }
+  };
+  
+  // アプリが起動したら広告を初期化
+  useEffect(() => {
+    // Webデスクトップでは広告を表示しない（Capacitorのみ）
+    if (Capacitor.isNativePlatform()) {
+      initializeAdMob();
+    }
+    
+    // アプリが終了する際にバナーを削除
+    return () => {
+      if (Capacitor.isNativePlatform() && adsInitialized) {
+        AdMob.removeBanner();
+      }
+    };
+  }, []);
   
   // サイコロの個数が変わったときに履歴を初期化
   useEffect(() => {
@@ -54,7 +113,8 @@ function App() {
     }));
     
     // 合計回数を更新
-    setTotalRolls(prev => prev + 1);
+    const newTotalRolls = totalRolls + 1;
+    setTotalRolls(newTotalRolls);
   };
   
   // 履歴をリセットする関数
@@ -117,8 +177,13 @@ function App() {
     );
   };
 
+  // 広告の影響を受けないようにコンテンツに下部パディングを追加
+  const contentStyle = {
+    paddingBottom: Capacitor.isNativePlatform() && adsInitialized ? '60px' : '10px'
+  };
+
   return (
-    <div className="app">
+    <div className="app" style={contentStyle}>
       <h1>サイコロシミュレーター</h1>
       
       <DiceCountSelector />
